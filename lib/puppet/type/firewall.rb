@@ -80,7 +80,7 @@ Puppet::Type.newtype(:firewall) do
   end
 
   # Generic matching properties
-  newproperty(:source) do
+  newproperty(:source, :array_matching => :all) do
     desc <<-EOS
       An array of source addresses. For example:
 
@@ -94,7 +94,7 @@ Puppet::Type.newtype(:firewall) do
     end
   end
 
-  newproperty(:destination) do
+  newproperty(:destination, :array_matching => :all) do
     desc <<-EOS
       An array of destination addresses to match. For example:
 
