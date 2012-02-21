@@ -88,6 +88,31 @@ Puppet::Type.type(:firewall).provide :iptables, :parent => Puppet::Provider::Fir
     @property_hash.clear
   end
 
+  # Combine two rule hashes together
+  # This makes the source and destination fields arrays
+  def combine(rule)
+    if rule.source
+      @property_hash[:source] = Array(self.source)
+      unless self.source.include?(rule.source)
+        @property_hash[:source].unshift(rule.source)
+      end
+    end
+    if rule.destination
+      @property_hash[:destination] = Array(self.destination)
+      unless self.destination.include?(rule.destination)
+        @property_hash[:destination].unshift(rule.destination)
+      end
+    end
+  end
+
+  # Return the "length" of a firewall resource, which is how many iptables
+  # rules it will generate, equal to source * dest, minimum 1 each
+  def length
+    srclen = [ Array(self.source).length, 1 ].max
+    dstlen = [ Array(self.destination).length, 1 ].max
+    srclen * dstlen
+  end
+
   def self.instances
     debug "[instances]"
     table = nil
@@ -101,8 +126,12 @@ Puppet::Type.type(:firewall).provide :iptables, :parent => Puppet::Provider::Fir
           table = line.sub(/\*/, "")
         else
           if hash = rule_to_hash(line, table, counter)
-            rules << new(hash)
-            counter += 1
+            if rules.length > 0 && hash[:name] == rules.last.name
+              rules.last.combine(new(hash))
+            else
+              rules << new(hash)
+              counter += 1
+            end
           end
         end
       end
@@ -261,7 +290,9 @@ Puppet::Type.type(:firewall).provide :iptables, :parent => Puppet::Provider::Fir
 
     # Find list of current rules based on chain
     self.class.instances.each do |rule|
-      rules << rule.name if rule.chain == resource[:chain].to_s
+      if rule.chain == resource[:chain].to_s
+        rule.length.times { rules << rule.name }
+      end
     end
 
     # No rules at all? Just bail now.
