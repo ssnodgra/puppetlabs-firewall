@@ -248,9 +248,20 @@ Puppet::Type.type(:firewall).provide :iptables, :parent => Puppet::Provider::Fir
 
   def general_args
     debug "Current resource: %s" % resource.class
+    create_args(self.class.instance_variable_get('@resource_list'))
+  end
 
+  # Return iptables arguments other than the table, source and destination
+  # Useful for iterating over source/dest and comparing rules
+  def option_args
+    debug "Current resource: %s" % resource.class
+    create_args(self.class.instance_variable_get('@resource_list').drop(3))
+  end
+
+  # Create arbitrary sets of iptables arguments with a custom resource_list
+  def create_args(reslist)
     args = []
-    resource_list = self.class.instance_variable_get('@resource_list')
+    resource_list = reslist
     resource_map = self.class.instance_variable_get('@resource_map')
 
     resource_list.each do |res|
